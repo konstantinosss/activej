@@ -11,6 +11,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Paths;
 import java.util.*;
 
 import static io.activej.codegen.TestUtils.assertStaticConstantsCleared;
@@ -1101,6 +1102,121 @@ public class ExpressionTest {
 		assertEquals(100, ref.value);
 	}
 
+	@org.junit.Test
+	public void testTryFinallyWithNoReturn() {
+		Variable argValue = property(arg(0), "value");
+
+		TestTryFinallyWithNoReturn withNoReturn = ClassBuilder.create(TestTryFinallyWithNoReturn.class)
+				.withMethod("method", tryFinally(
+						set(argValue, value(100)),
+						set(argValue, add(cast(argValue, int.class), value(5)))
+				))
+				.defineClassAndCreateInstance(CLASS_LOADER.withDebugOutputDir(Paths.get("C:\\Users\\juicy\\AppData\\Local\\Temp\\xxs")));
+
+		Ref ref = new Ref();
+		withNoReturn.method(ref);
+
+		assertEquals(105, ref.value);
+	}
+
+	@org.junit.Test
+	public void testTryFinallyWithReturn() {
+		Variable argValue = property(arg(0), "value");
+
+		TestTryFinallyWithReturn withReturn = ClassBuilder.create(TestTryFinallyWithReturn.class)
+				.withMethod("method", tryFinally(
+						sequence(set(argValue, value(100)), value(5)),
+						set(argValue, add(cast(argValue, int.class), value(5)))
+				))
+				.defineClassAndCreateInstance(CLASS_LOADER.withDebugOutputDir(Paths.get("C:\\Users\\juicy\\AppData\\Local\\Temp\\xxs")));
+
+		Ref ref = new Ref();
+		int result = withReturn.method(ref);
+
+		assertEquals(5, result);
+		assertEquals(105, ref.value);
+	}
+
+	@org.junit.Test
+	public void testTryFinallyWithReturnOverwritten() {
+		Variable argValue = property(arg(0), "value");
+
+		TestTryFinallyWithReturn withReturn = ClassBuilder.create(TestTryFinallyWithReturn.class)
+				.withMethod("method", tryFinally(
+						sequence(set(argValue, value(100)), value(5)),
+						sequence(set(argValue, add(cast(argValue, int.class), value(5))), value(3))
+				))
+				.defineClassAndCreateInstance(CLASS_LOADER.withDebugOutputDir(Paths.get("C:\\Users\\juicy\\AppData\\Local\\Temp\\xxs")));
+
+		Ref ref = new Ref();
+		int result = withReturn.method(ref);
+
+		assertEquals(3, result);
+		assertEquals(105, ref.value);
+	}
+
+	@org.junit.Test
+	public void testTryFinallyWithNoReturnException() {
+		Variable argValue = property(arg(0), "value");
+
+		TestTryFinallyWithNoReturn withNoReturn = ClassBuilder.create(TestTryFinallyWithNoReturn.class)
+				.withMethod("method", tryFinally(
+						throwException(Exception.class, "test"),
+						set(argValue, value(333))
+				))
+				.defineClassAndCreateInstance(CLASS_LOADER.withDebugOutputDir(Paths.get("C:\\Users\\juicy\\AppData\\Local\\Temp\\xxs")));
+
+		Ref ref = new Ref();
+		try {
+			withNoReturn.method(ref);
+			fail();
+		} catch (Exception e) {
+			assertEquals("test", e.getMessage());
+		}
+
+		assertEquals(333, ref.value);
+	}
+
+	@org.junit.Test
+	public void testTryFinallyWithReturnException() {
+		Variable argValue = property(arg(0), "value");
+
+		TestTryFinallyWithReturn withReturn = ClassBuilder.create(TestTryFinallyWithReturn.class)
+				.withMethod("method", tryFinally(
+						throwException(Exception.class, "test"),
+						set(argValue, value(333))
+				))
+				.defineClassAndCreateInstance(CLASS_LOADER.withDebugOutputDir(Paths.get("C:\\Users\\juicy\\AppData\\Local\\Temp\\xxs")));
+
+		Ref ref = new Ref();
+		try {
+			withReturn.method(ref);
+			fail();
+		} catch (Exception e) {
+			assertEquals("test", e.getMessage());
+		}
+
+		assertEquals(333, ref.value);
+	}
+
+	@org.junit.Test
+	public void testTryFinallyWithReturnOverwrittenException() {
+		Variable argValue = property(arg(0), "value");
+
+		TestTryFinallyWithReturn withReturn = ClassBuilder.create(TestTryFinallyWithReturn.class)
+				.withMethod("method", tryFinally(
+						throwException(Exception.class, "test"),
+						sequence(set(argValue, value(333)), value(7))
+				))
+				.defineClassAndCreateInstance(CLASS_LOADER.withDebugOutputDir(Paths.get("C:\\Users\\juicy\\AppData\\Local\\Temp\\xxs")));
+
+		Ref ref = new Ref();
+		int result = withReturn.method(ref);
+
+		assertEquals(7, result);
+		assertEquals(333, ref.value);
+	}
+
 	public static class Ref {
 		public Object value;
 	}
@@ -1111,5 +1227,13 @@ public class ExpressionTest {
 
 	public interface TestIterate {
 		void iterate(Ref ref);
+	}
+
+	public interface TestTryFinallyWithNoReturn {
+		void method(Ref ref);
+	}
+
+	public interface TestTryFinallyWithReturn {
+		int method(Ref ref);
 	}
 }

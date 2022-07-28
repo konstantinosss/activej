@@ -890,4 +890,7 @@ public class Expressions {
 		return comparator;
 	}
 
+	public static Expression tryFinally(Expression tryBlock, Expression finallyBlock) {
+		return new ExpressionTryFinally(tryBlock, finallyBlock);
+	}
 }
